@@ -16,11 +16,11 @@ class InputEmbeddings(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self,d_model:int,seq_len:int,dropuout:float):
+    def __init__(self,d_model:int,seq_len:int,dropout:float):
         super().__init__()
         self.d_model = d_model
         self.seq_len = seq_len
-        self.dropout = dropuout
+        self.dropout = nn.Dropout(dropout)f
 
         #create a matrix of shape (seq,len,d_model)
         pe = torch.zeros(seq_len,d_model)
@@ -40,3 +40,18 @@ class PositionalEncoding(nn.Module):
     def forward(self,x):
         x = x + (self.pe[:, :x.shape[1], :]).requires_grad(False)
         return self.dropout(x)
+
+class LayerNormalization(nn.Module):
+    def __init__(self,eps:float = 1e-6):
+        super().__init__()
+        self.eps = eps
+        self.alpha = nn.Parameter(torch.ones(1)) #multiplied
+        self.bias = nn.Parameter(torch.zeros(1)) #added
+
+    def forward(self,x):
+        mean = x.mean(dim=-1, keepdim=True)
+        std = x.std(dim=-1, keepdim=True)
+        return (self.alpha * ((x-mean)/(std+self.eps))) + self.bias
+
+
+        
