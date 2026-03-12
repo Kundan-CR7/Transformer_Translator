@@ -95,12 +95,12 @@ class MultiHeadAttention(nn.Module):
     def forward(self,q,k,v,mask):
         query = self.w_q(q) # (Batch,seq_len,d_model) --> (Batch,seq_len,d_model)
         key = self.w_q(k) # (Batch,seq_len,d_model) --> (Batch,seq_len,d_model)
-        query = self.w_q(v) # (Batch,seq_len,d_model) --> (Batch,seq_len,d_model)
+        value = self.w_q(v) # (Batch,seq_len,d_model) --> (Batch,seq_len,d_model)
 
         # (Batch,seq_len,d_model) --> (Batch,seq_len,h,d_k) -- > (Batch,h,seq_len,k)
         query = query.view(query.shape[0],query.shape[1],self.h,self.d_k).transpose(1,2)
-        key = query.view(key.shape[0],key.shape[1],self.h,self.d_k).transpose(1,2)
-        value = query.view(value.shape[0],value.shape[1],self.h,self.d_k).transpose(1,2)
+        key = key.view(key.shape[0],key.shape[1],self.h,self.d_k).transpose(1,2)
+        value = value.view(value.shape[0],value.shape[1],self.h,self.d_k).transpose(1,2)
 
         x,self.attention_scores = MultiHeadAttention.attention(query,key,value,mask,self.dropout)
 
@@ -118,3 +118,15 @@ class ResidualConnection(nn.Module):
 
     def forward(self,x,sublayer):
         return x + self.dropout(sublayer(self.norm(x)))
+    
+class EncoderBlock(nn.Module):
+    def __init__(self, self_attention_block:MultiHeadAttention, feed_forward_block:FeedForward, dropout:float):
+        super().__init__()
+        self.self_attention_block = self_attention_block
+        self.feed_forward_block = feed_forward_block
+        self.residual_connections = nn.ModuleList([ResidualConnection(dropout) for _ in range(2)])
+
+    def forward(self,x,src_mask):
+        x = self.residual_connections[0](x, lambda x: self.self_attention_block(x,x,x,src_mask))
+        x = self.residual_connections[1](x,self.feed_forward_block)
+        return x
