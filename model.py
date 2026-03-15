@@ -20,7 +20,7 @@ class PositionalEncoding(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.seq_len = seq_len
-        self.dropout = nn.Dropout(dropout)f
+        self.dropout = nn.Dropout(dropout)
 
         #create a matrix of shape (seq,len,d_model)
         pe = torch.zeros(seq_len,d_model)
@@ -38,7 +38,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe",pe)
 
     def forward(self,x):
-        x = x + (self.pe[:, :x.shape[1], :]).requires_grad(False)
+        x = x + self.pe[:, :x.shape[1], :].requires_grad_(False)
         return self.dropout(x)
 
 class LayerNormalization(nn.Module):
@@ -83,7 +83,7 @@ class MultiHeadAttention(nn.Module):
         d_k = query.shape[-1]
         # (Batch,h,seq_len,d_k) --> (Batch,h,seq_len,seq_len)
         attention_score = (query @ key.transpose(-2,-1)) / math.sqrt(d_k)
-        if(mask):
+        if(mask is not None):
             attention_score.masked_fill_(mask==0, -1e9)
         attention_score = attention_score.softmax(dim=-1) #(Batch,h,seq_len,seq_len)
         if(dropout):
@@ -148,7 +148,7 @@ class DecoderBlock(nn.Module):
         self.self_attention_block = self_attention_block
         self.cross_attention_block = cross_attention_block
         self.feed_forward_block = feed_forward_block
-        self.residual_connections = nn.ModuleList([ResidualConnection(float) for _ in range(3)])
+        self.residual_connections = nn.ModuleList([ResidualConnection(dropout) for _ in range(3)])
 
     def forward(self,x,encoder_output,src_mask,tgt_mask):
         x = self.residual_connections[0](x, lambda x: self.self_attention_block(x,x,x,tgt_mask))
@@ -202,7 +202,7 @@ class Transformer(nn.Module):
 def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int, tgt_seq_len : int, d_model: int = 512, N: int = 6, h: int = 8, dropout = 0.1, d_ff: int = 2048):
     #Create the embedding layers
     src_embed = InputEmbeddings(d_model,src_vocab_size)
-    tgt_embed = InputEmbeddings(d_model, tgt_seq_len, dropout)
+    tgt_embed = InputEmbeddings(d_model, tgt_vocab_size)
 
     #Create the positional layers
     src_pos = PositionalEncoding(d_model,src_seq_len,dropout)
