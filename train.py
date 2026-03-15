@@ -39,9 +39,8 @@ def get_or_build_tokenizer(config, ds, lang):
 
 def get_ds(config):
     ds_raw = load_dataset(
-        "opus_books",
-        f'{config["lang_src"]}-{config["lang_tgt"]}',
-        split="train"
+        "cfilt/iitb-english-hindi",
+        split="train[:50000]"
     )
     tokenizer_src = get_or_build_tokenizer(config, ds_raw, config['lang_src'])
     tokenizer_tgt = get_or_build_tokenizer(config, ds_raw, config['lang_tgt'])
