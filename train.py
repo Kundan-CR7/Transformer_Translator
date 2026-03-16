@@ -144,13 +144,14 @@ def train_model(config):
             global_step += 1
 
         #Save the model at the end of every epoch
-        model_filename = get_weights_from_path(config,f"{epoch:02d}")
-        torch.save({
-            "epoch":epoch,
-            "model_state_dict" : model.state_dict(),
-            "optimizer_state_dict" : optimizer.state_dict(),
-            "global_state" : global_step
-        },model_filename)
+        if(epoch % 5 == 0):
+            model_filename = get_weights_from_path(config,f"{epoch:02d}")
+            torch.save({
+                "epoch":epoch,
+                "model_state_dict" : model.state_dict(),
+                "optimizer_state_dict" : optimizer.state_dict(),
+                "global_state" : global_step
+            },model_filename)
 
 
 if __name__ == "__main__":
