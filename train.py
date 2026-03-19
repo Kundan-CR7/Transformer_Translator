@@ -107,10 +107,13 @@ def train_model(config):
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"),label_smoothing=0.1).to(device)
 
+    best_loss = float("inf")
     for epoch in range(initial_epoch,config["num_epochs"]):
         model.train()
         batch_iterator = tqdm(train_dataloader,desc=f"Processing epoch {epoch:02d}")
         
+        epoch_loss = 0
+
         for batch in batch_iterator:
             encoder_input = batch["encoder_input"].to(device) #(B,seq_len)
             decoder_input = batch["decoder_input"].to(device) #(B,seq_len)
@@ -119,8 +122,6 @@ def train_model(config):
 
             #Run the tensors through the transformer
             encoder_output = model.encode(encoder_input,encoder_mask) #(B,seq_len,d_model)
-            print(f"Max token ID in decoder_input: {decoder_input.max().item()}")
-            print(f"Target Embedding Vocab Size: {model.tgt_embed.embedding.num_embeddings}") # Adjust if your embedding is wrapped
             decoder_output = model.decode(encoder_output,encoder_mask,decoder_input,decoder_mask) #(B,seq_len,d_model)
             project_output = model.project(decoder_output) #(B,seq_len,tgt_vocab_size)
 
@@ -128,6 +129,7 @@ def train_model(config):
 
             #(B,seq_len,tgt_vocab_size) --> (B*seq_len,tgt_vocab_size)
             loss = loss_fn(project_output.view(-1,tokenizer_tgt.get_vocab_size()),label.view(-1))
+            epoch_loss += loss.item()
             batch_iterator.set_postfix({f"loss": f"{loss.item():6.3f}"})
 
             #Log the loss
@@ -143,15 +145,23 @@ def train_model(config):
 
             global_step += 1
 
-        #Save the model at the end of every epoch
-        if(epoch % 5 == 0):
-            model_filename = get_weights_from_path(config,f"{epoch:02d}")
+        epoch_loss = epoch_loss / len(train_dataloader)
+        print(f"Epoch {epoch} average loss: {epoch_loss:.4f}")
+
+        # ✅ Save BEST model
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+
+            model_filename = get_weights_from_path(config, "best")
+
             torch.save({
-                "epoch":epoch,
-                "model_state_dict" : model.state_dict(),
-                "optimizer_state_dict" : optimizer.state_dict(),
-                "global_state" : global_step
-            },model_filename)
+                "epoch": epoch,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "global_step": global_step
+            }, model_filename)
+
+            print(f"✅ Saved BEST model at epoch {epoch} with loss {best_loss:.4f}")
 
 
 if __name__ == "__main__":
