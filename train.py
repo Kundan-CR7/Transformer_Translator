@@ -101,9 +101,9 @@ def train_model(config):
     if(config["preload"]):
         model_filename = get_weights_from_path(config,config["preload"])
         print(f"Preloading model {model_filename}")
+        state = torch.load(model_filename)
         model.load_state_dict(state["model_state_dict"])
         optimizer.load_state_dict(state["optimizer_state_dict"])
-        state = torch.load(model_filename)
         initial_epoch = state["epoch"] + 1
         global_step = state["global_step"]
         best_loss = state.get("best_loss", float("inf"))
