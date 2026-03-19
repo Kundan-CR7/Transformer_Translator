@@ -88,6 +88,7 @@ def train_model(config):
     Path(config["model_folder"]).mkdir(parents=True,exist_ok=True)
 
     train_dataloader,val_dataloader,tokenizer_src,tokenizer_tgt = get_ds(config)
+    
     model = get_model(config,tokenizer_src.get_vocab_size(),tokenizer_tgt.get_vocab_size()).to(device)
 
     #Tensorboard
@@ -100,9 +101,10 @@ def train_model(config):
     if(config["preload"]):
         model_filename = get_weights_from_path(config,config["preload"])
         print(f"Preloading model {model_filename}")
+        model.load_state_dict(state["model_state_dict"])
+        optimizer.load_state_dict(state["optimizer_state_dict"])
         state = torch.load(model_filename)
         initial_epoch = state["epoch"] + 1
-        optimizer.load_state_dict(state["optimizer_state_dict"])
         global_step = state["global_step"]
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"),label_smoothing=0.1).to(device)
