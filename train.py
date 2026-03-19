@@ -106,6 +106,7 @@ def train_model(config):
         state = torch.load(model_filename)
         initial_epoch = state["epoch"] + 1
         global_step = state["global_step"]
+        best_loss = state.get("best_loss", float("inf"))
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id("[PAD]"),label_smoothing=0.1).to(device)
 
@@ -160,7 +161,8 @@ def train_model(config):
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
-                "global_step": global_step
+                "global_step": global_step,
+                "best_loss" : best_loss
             }, model_filename)
 
             print(f"✅ Saved BEST model at epoch {epoch} with loss {best_loss:.4f}")
